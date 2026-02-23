@@ -9,13 +9,6 @@ This experiment trains a **Graph Neural Network (GNN)** to predict DNA thermodyn
 
 The work builds on the paper *"High-Throughput DNA melt measurements enable improved models of DNA folding thermodynamics"* and uses the same dataset of ~30,000 sequences with experimentally measured thermodynamic values.
 
-### How it works
-
-Each DNA sequence is represented as a **graph**:
-- **Nodes** — one per nucleotide, encoded as a 4-dimensional one-hot vector (A, T, C, G).
-- **Edges** — three types: 5'→3' backbone, 3'→5' backbone, and hydrogen bonds (from dot-bracket structure).
-
-The GNN architecture uses **TransformerConv** layers (4 layers, 125 hidden channels), **Set2Set** pooling, and an MLP head to predict normalized dH and Tm.
 
 ## File Structure
 
