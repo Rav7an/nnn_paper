@@ -6,6 +6,15 @@ Do not import from `nnn` as those use a different environment
 import os
 import torch
 os.environ['TORCH'] = torch.__version__
+
+# Monkey-patch torch.load for compatibility with torch_geometric
+# PyTorch 1.12 doesn't support the 'weights_only' kwarg added in 1.13+
+_original_torch_load = torch.load
+def _patched_torch_load(*args, **kwargs):
+    kwargs.pop('weights_only', None)
+    return _original_torch_load(*args, **kwargs)
+torch.load = _patched_torch_load
+
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -285,7 +294,19 @@ class NNNCurveDataset(NNNDataset):
 
 class NNNDatasetWithDuplex(NNNDataset):
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
-        super().__init__(root, transform, pre_transform, pre_filter)
+        # Skip NNNDataset.__init__ and call InMemoryDataset directly
+        InMemoryDataset.__init__(self, root, transform, pre_transform, pre_filter)
+        self.data, self.slices = torch.load(self.processed_paths[0])
+
+        with open(os.path.join(self.raw_dir, self.raw_file_names[1]), 'r') as fh:
+            self.data_split_dict = json.load(fh)
+
+        self.arr = pd.read_csv(os.path.join(self.raw_dir, self.raw_file_names[0]), index_col='SEQID')
+        self.arr.sort_index(inplace=True)
+        self.seqid = self.arr.index
+        self.sumstats_dict = calc_sumstats(self.arr.loc[self.data_split_dict['train_ind']])
+        print('Initiating, summary statistis of the training set is:')
+        pprint(self.sumstats_dict)
         self.dataset_name_list = ['arr', 'uv', 'lit_uv', 'ov']
         
     @property
@@ -336,6 +357,18 @@ class NNNDatasetWithDuplex(NNNDataset):
     #     self.sumstats_dict = calc_sumstats(self.arr.loc[self.data_split_dict['train_ind']])
     #     data_list = [row2graphdata(row, self.sumstats_dict, method='normalize') for _,row in self.arr.iterrows()]
     #     super().process_data_list(data_list)
+
+    def process(self):
+        print(self.raw_dir)
+        self.arr = pd.read_csv(os.path.join(self.raw_dir, self.raw_file_names[0]), index_col='SEQID')
+        self.arr.sort_index(inplace=True)
+        
+        with open(os.path.join(self.raw_dir, self.raw_file_names[1]), 'r') as fh:
+            self.data_split_dict = json.load(fh)
+            
+        self.sumstats_dict = calc_sumstats(self.arr.loc[self.data_split_dict['train_ind']])
+        data_list = [row2graphdata(row, sumstats_dict=self.sumstats_dict, method='normalize') for _,row in self.arr.iterrows()]
+        self.process_data_list(data_list)
         
 
 def sweep_model():
@@ -392,6 +425,7 @@ def run_saved_model(hyperparameters,
             # and test its final performance
             test(model, train_loader, test_loader, **extra_kwargs)
     else:
+        config = hyperparameters
         saved_model_path = config['saved_model_path']
 
         # make the model, data, and optimization problem
@@ -446,7 +480,8 @@ def model_pipeline(hyperparameters, save_model=False):
             
         if save_model:
             ## SAVING MODEL ##
-            model_path = f'/mnt/d/data/nnn/models/gnn_state_dict_{wandb.run.name}.pt'
+            os.makedirs('./models', exist_ok=True)
+            model_path = f'./models/gnn_state_dict_{wandb.run.name}.pt'
             torch.save(model.state_dict(), model_path)
 
     return model
@@ -455,7 +490,8 @@ def model_pipeline(hyperparameters, save_model=False):
 def make(config):
     # Make the data
     torch.manual_seed(12345)
-    root = '/mnt/d/data/nnn/'
+    # root = '/mnt/d/data/nnn/'
+    root = './data/models'
     kwargs = dict(root=root)
     if config['dataset'] == 'NNN_v0':
         dataset = NNNDatasetdHTmV0(**kwargs)
@@ -466,7 +502,7 @@ def make(config):
     elif config['dataset'] == 'NNN_curve_v1':
         dataset = NNNCurveDataset(**kwargs)
     elif config['dataset'] == 'NNN_v2':
-        dataset = NNNDatasetWithDuplex(root='/mnt/d/data/nnn/')
+        dataset = NNNDatasetWithDuplex(root=root)
     else:
         raise ValueError(config['dataset'])
         
@@ -698,6 +734,9 @@ def get_truth_pred(loader, model):
     # detach the hook
     handle.remove() 
 
+    if len(aggr_list) == 0:
+        return dict(y=y, pred=pred, aggr_out=np.array([]))
+
     if hasattr(loader, 'sumstats_dict'):
         if len(loader.sumstats_dict) > 0:
             y = unorm(y, loader.sumstats_dict)
@@ -771,10 +810,12 @@ def train(model, train_loader, test_loader, criterion, optimizer, config, test_l
             if test_loader_dict is not None:
                 # Temporarily not using `uv` as it's crap
                 extra_test_result_dict = {dataset_name: get_truth_pred(loader, model) 
-                            for dataset_name, loader in test_loader_dict.items() if dataset_name != 'uv'}
+                            for dataset_name, loader in test_loader_dict.items() 
+                            if dataset_name != 'uv' and len(loader.dataset) > 0}
                 
                 for dataset_name, test_result in extra_test_result_dict.items():
-                    log_extra_test_result(dataset_name, test_result, epoch)
+                    if test_result['y'].shape[0] > 0:
+                        log_extra_test_result(dataset_name, test_result, epoch)
 
 def log_extra_test_result(dataset_name, test_result, epoch):
     """
@@ -822,6 +863,13 @@ def test(model, train_loader, test_loader, test_loader_dict=None, test_result_fn
     Tm_rmse, Tm_mae = plot_truth_pred(test_result, ax[1,1], param='Tm', title='Validation')
     dG_37_rmse, dG_37_mae = plot_truth_pred(test_result, ax[1,2], param='dG_37', title='Validation')
     plt.tight_layout()
+    
+    # Print metrics regardless of wandb
+    print(f'\n=== Validation Results ===')
+    print(f'dH:    RMSE = {dH_rmse:.4f}, MAE = {dH_mae:.4f}')
+    print(f'Tm:    RMSE = {Tm_rmse:.4f}, MAE = {Tm_mae:.4f}')
+    print(f'dG_37: RMSE = {dG_37_rmse:.4f}, MAE = {dG_37_mae:.4f}')
+    
     if log_wandb:
         wandb.log({'fig': wandb.Image(fig)})
         wandb.run.summary["n_parameters"] = get_n_param(model)
@@ -831,17 +879,22 @@ def test(model, train_loader, test_loader, test_loader_dict=None, test_result_fn
     
     if test_loader_dict is not None:
         extra_test_result_dict = {dataset_name: get_truth_pred(loader, model) 
-                                  for dataset_name, loader in test_loader_dict.items() if dataset_name != 'arr'}
+                                  for dataset_name, loader in test_loader_dict.items() 
+                                  if dataset_name != 'arr' and len(loader.dataset) > 0}
         
-        fig_extra, ax = plt.subplots(1, len(extra_test_result_dict), figsize=(9,3))
-        i = 0
-        for dataset_name, test_result in extra_test_result_dict.items():
-            log_final_extra_test_results(dataset_name, test_result, Tm_only=True, ax=ax[i])
-            i += 1
-        sns.despine()
-        plt.tight_layout() 
-        if log_wandb:
-            wandb.log({'extra test results': wandb.Image(fig_extra)})
+        if len(extra_test_result_dict) > 0:
+            fig_extra, ax = plt.subplots(1, len(extra_test_result_dict), figsize=(9,3))
+            if len(extra_test_result_dict) == 1:
+                ax = [ax]
+            i = 0
+            for dataset_name, test_result in extra_test_result_dict.items():
+                if test_result['y'].shape[0] > 0:
+                    log_final_extra_test_results(dataset_name, test_result, Tm_only=True, ax=ax[i], log_wandb=log_wandb)
+                    i += 1
+            sns.despine()
+            plt.tight_layout() 
+            if log_wandb:
+                wandb.log({'extra test results': wandb.Image(fig_extra)})
         
         if test_result_fn is not None:
             # only saving aggr_out for lit_uv and ov here.
@@ -853,7 +906,7 @@ def test(model, train_loader, test_loader, test_loader_dict=None, test_result_fn
     # plt.show()
     
     
-def log_final_extra_test_results(dataset_name:str, test_result:dict, Tm_only:bool=True, ax=None):
+def log_final_extra_test_results(dataset_name:str, test_result:dict, Tm_only:bool=True, ax=None, log_wandb:bool=True):
     """
     Args:
         result - dict(y=y, pred=pred), dict[np.array (n,2)]
@@ -881,14 +934,22 @@ def log_final_extra_test_results(dataset_name:str, test_result:dict, Tm_only:boo
         ax.xaxis.set_major_locator(MultipleLocator(Tm_locator))
         ax.yaxis.set_major_locator(MultipleLocator(Tm_locator))
         
-        # Logging to wandb
-        wandb.run.summary['Tm_mae_%s'%dataset_name] = np.nanmean(np.abs(result_df.Tm - result_df.Tm_pred))
-        wandb.run.summary['Tm_corr_%s'%dataset_name] = pearsonr(result_df.Tm, result_df.Tm_pred)[0]
-        fn = './out/%s_%s.csv' % (wandb.run.name, dataset_name)
-        result_df.to_csv(fn)
+        # Print metrics locally
+        Tm_mae = np.nanmean(np.abs(result_df.Tm - result_df.Tm_pred))
+        Tm_corr = pearsonr(result_df.Tm, result_df.Tm_pred)[0]
+        print(f'{dataset_name}: Tm MAE = {Tm_mae:.4f}, Tm corr = {Tm_corr:.4f}')
         
-        result_table = wandb.Table(dataframe=result_df)
-        wandb.log({dataset_name+'_table': result_table})
+        os.makedirs('./out', exist_ok=True)
+        if log_wandb:
+            wandb.run.summary['Tm_mae_%s'%dataset_name] = Tm_mae
+            wandb.run.summary['Tm_corr_%s'%dataset_name] = Tm_corr
+            fn = './out/%s_%s.csv' % (wandb.run.name, dataset_name)
+            result_df.to_csv(fn)
+            result_table = wandb.Table(dataframe=result_df)
+            wandb.log({dataset_name+'_table': result_table})
+        else:
+            fn = './out/%s_%s.csv' % (dataset_name, 'eval')
+            result_df.to_csv(fn)
         # result_table_artifact = wandb.Artifact("%s_artifact"%dataset_name, type="dataset")
         # result_table_artifact.add(result_table, dataset_name)
         # result_table_artifact.add_file(fn)

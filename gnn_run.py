@@ -32,7 +32,7 @@ from nnn.gnn import *
 # Everything else is just for logging purpose
 linear_hidden_channels=[128]
 config = dict(
-    mode='test',
+    mode='val',
     n_epoch=200,
     params=['dH', 'Tm'], # not used by the program, for logging only
     norm_method='normalize', # not used by the program, for logging only
@@ -50,14 +50,25 @@ config = dict(
     use_train_set_ratio=1,
     architecture="GraphTransformer",
     concat=False,
-    saved_model_path='/path/to/saved/model/gnn_state_dict_ancient-sound-259.pt',
+    saved_model_path='./models/gnn_state_dict_bumbling-serenity-13.pt',
     )
 
-# 3: Start the run
+# 3: Load saved model and run validation
 
 trained_model = run_saved_model(config, 
     test_result_fn='test_result_aggr_out.npz',
     log_wandb=False)
+
+model = model_pipeline(config, save_model=True)
+
+# Manual model saving with custom path and name
+# model_path = r'E:\project ms\nnn_paper\anant_experiments\my_exp1.pt'
+# torch.save(model.state_dict(), config['saved_model_path'])
+# print(f"Model saved successfully at: {config['saved_model_path']}")
+
+# trained_model = run_saved_model(config, 
+#     test_result_fn='test_result_aggr_out.npz',
+#     log_wandb=False)
 
 ## SAVING MODEL ##
 # model_path = f'/mnt/d/data/nnn/models/gnn_state_dict_{wandb.run.name}.pt'
