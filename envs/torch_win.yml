@@ -1,0 +1,46 @@
+name: nnn_linux
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  # Core Python
+  - python=3.9.13
+  - pip
+
+  # PyTorch Stack (Pinned to paper versions)
+  - pytorch=1.12.1
+  - torchvision=0.13.1
+  - torchaudio=0.12.1
+  - cudatoolkit=11.6
+  
+  # Scientific Computing Stack
+  - numpy=1.23.1
+  - mkl
+  - mkl-include
+  - blas=1.0=mkl
+  - mkl-service
+  - pandas=1.5.1
+  - scipy=1.9.2
+  - scikit-learn=1.1.2
+  - matplotlib=3.4.3
+  - seaborn=0.12.0
+  - networkx=3.1
+  
+  # Jupyter & Dev Tools
+  - jupyterlab
+  - notebook
+  - ipykernel
+  - tqdm
+  - pyyaml
+
+  # Pip packages
+  - pip:
+    - --find-links https://data.pyg.org/whl/torch-1.12.1+cu116.html
+    - wandb==0.13.5
+    - torch-geometric==2.3.1
+    - torch-scatter==2.0.9
+    - torch-sparse==0.6.15
+    - torch-cluster==1.6.0
+    - torch-spline-conv==1.2.1
