@@ -23,7 +23,10 @@ C2T = 273.15 # conversion from celsius to kalvin
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-print(torch.cuda.get_device_name(0))
+if torch.cuda.is_available():
+    print(torch.cuda.get_device_name(0))
+else:
+    print("CUDA not available; using CPU")
 
 sys.path.append('..')
 from nnn.gnn import *
