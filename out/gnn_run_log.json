@@ -1,0 +1,47 @@
+{
+  "experiment_id": "E0",
+  "model": "GNN_TransformerConv_Set2Set",
+  "config": {
+    "model_name": "GNN_TransformerConv_Set2Set",
+    "experiment_id": "E0",
+    "hidden_channels": 125,
+    "n_conv_layers": 4,
+    "linear_hidden": 128,
+    "conv_dropout": 0.0127,
+    "linear_dropout": 0.25,
+    "set2set_steps": 10,
+    "n_epoch": 200,
+    "batch_size": 256,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "grad_clip": 1.0,
+    "dataset": "arr",
+    "wandb_project": "NNN_Thesis_Experiments",
+    "checkpoint_dir": "MyExperiments/GNN/models"
+  },
+  "n_params": 859023,
+  "val_metrics": {
+    "dH_mae": 3.682253360748291,
+    "dH_rmse": 4.917921543121338,
+    "dH_r2": 0.8011254283911272,
+    "Tm_mae": 3.2833616733551025,
+    "Tm_rmse": 4.328126430511475,
+    "Tm_r2": 0.8397129608372231,
+    "dG_37_mae": 0.26585108041763306,
+    "dG_37_rmse": 0.39038458466529846,
+    "dG_37_r2": 0.8572008798452432
+  },
+  "test_metrics": {
+    "dH_mae": 3.7032511234283447,
+    "dH_rmse": 4.8029255867004395,
+    "dH_r2": 0.8097629681678459,
+    "Tm_mae": 3.1889631748199463,
+    "Tm_rmse": 4.21691370010376,
+    "Tm_r2": 0.8418405875938879,
+    "dG_37_mae": 0.2624395787715912,
+    "dG_37_rmse": 0.3835245668888092,
+    "dG_37_r2": 0.8637849280739754
+  },
+  "best_checkpoint": "MyExperiments/GNN/models\\best_gnn_model.pt",
+  "lit_uv_Tm_mae": 5.508478320330038
+}

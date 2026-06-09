@@ -1,0 +1,48 @@
+{
+  "experiment_id": "E4",
+  "model": "PINN_2DCNN",
+  "config": {
+    "model_name": "PINN_2DCNN",
+    "experiment_id": "E4",
+    "max_width": 15,
+    "in_channels": 6,
+    "dropout": 0.2,
+    "alpha_penalty": 0.1,
+    "n_epoch": 200,
+    "batch_size": 256,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "grad_clip": 1.0,
+    "dataset": "arr",
+    "norm_method": "normalize",
+    "wandb_project": "NNN_Thesis_Experiments",
+    "checkpoint_dir": "MyExperiments/PINN/models"
+  },
+  "n_params": 340611,
+  "val_metrics": {
+    "dH_mae": 3.59709095954895,
+    "dH_rmse": 4.638054370880127,
+    "dH_r2": 0.8231163215977666,
+    "Tm_mae": 2.7542927265167236,
+    "Tm_rmse": 3.950148582458496,
+    "Tm_r2": 0.8664864454273821,
+    "dG_37_mae": 0.19497501850128174,
+    "dG_37_rmse": 0.26600879430770874,
+    "dG_37_r2": 0.933697157200542
+  },
+  "test_metrics": {
+    "dH_mae": 3.6121320724487305,
+    "dH_rmse": 4.561529636383057,
+    "dH_r2": 0.8284051235371093,
+    "Tm_mae": 2.73681640625,
+    "Tm_rmse": 3.898998737335205,
+    "Tm_r2": 0.8647890985522885,
+    "dG_37_mae": 0.20006725192070007,
+    "dG_37_rmse": 0.26755109429359436,
+    "dG_37_r2": 0.9337093521322928
+  },
+  "best_checkpoint": "MyExperiments/PINN/models\\best_pinn_model.pt",
+  "history_path": "out/pinn_history.json",
+  "eval_csv_path": "out/pinn_val_eval.csv",
+  "lit_uv_Tm_mae": 6.310990885239659
+}

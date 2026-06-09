@@ -1,0 +1,58 @@
+{
+  "experiment_id": "E3",
+  "model": "StructureAwareTransformer",
+  "config": {
+    "model_name": "StructureAwareTransformer",
+    "experiment_id": "E3",
+    "max_len": 24,
+    "input_dim": 7,
+    "d_model": 128,
+    "nhead": 8,
+    "num_layers": 4,
+    "ff_dim": 256,
+    "dropout": 0.1,
+    "lambda_init": 1.0,
+    "n_epoch": 200,
+    "batch_size": 256,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "grad_clip": 1.0,
+    "dataset": "arr",
+    "norm_method": "normalize",
+    "wandb_project": "NNN_Thesis_Experiments",
+    "checkpoint_dir": "MyExperiments/SAT/models"
+  },
+  "n_params": 541126,
+  "val_metrics": {
+    "dH_mae": 3.4192357063293457,
+    "dH_rmse": 4.600866317749023,
+    "dH_r2": 0.8259414742740598,
+    "Tm_mae": 2.251096487045288,
+    "Tm_rmse": 3.27748966217041,
+    "Tm_r2": 0.9080861074643383,
+    "dG_37_mae": 0.21726876497268677,
+    "dG_37_rmse": 0.3140822649002075,
+    "dG_37_r2": 0.9075670039754563
+  },
+  "test_metrics": {
+    "dH_mae": 3.263718366622925,
+    "dH_rmse": 4.298947334289551,
+    "dH_r2": 0.8475920688193532,
+    "Tm_mae": 2.3201138973236084,
+    "Tm_rmse": 3.3027336597442627,
+    "Tm_r2": 0.9029819285700125,
+    "dG_37_mae": 0.21400102972984314,
+    "dG_37_rmse": 0.29471462965011597,
+    "dG_37_r2": 0.919565542715876
+  },
+  "best_checkpoint": "MyExperiments/SAT/models\\best_sat_model.pt",
+  "history_path": "out/sat_history.json",
+  "eval_csv_path": "out/sat_val_eval.csv",
+  "lambda_final": {
+    "L0": 0.9786270260810852,
+    "L1": 0.24032360315322876,
+    "L2": 0.0028159560170024633,
+    "L3": 0.00030944449827075005
+  },
+  "lit_uv_Tm_mae": 8.597281916264016
+}
